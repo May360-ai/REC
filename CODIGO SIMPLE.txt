@@ -1,6 +1,6 @@
 //CODIGO SIMPLE
 
-//CONEXION
+//-----------------------------------------CONEXION
 
 <?php
 
@@ -54,7 +54,7 @@ case 'PUT':
 
 ?>
 
-//CRUDS
+//-------------------------------------------CRUDS
 
 <?php
 include_once("conexion.php");
@@ -131,7 +131,7 @@ class Cruds{
 
 ?>
 
-//APISERVICION JAVA
+//------------------------------------------APISERVICION JAVA
 
 import java.io.*;
 import java.net.*;
@@ -179,7 +179,7 @@ public class ApiService {
     }
 }
 
-//ESTUDIANTE
+//------------------------------------------------------------ESTUDIANTE
 
  */
 public class Estudiante {
@@ -199,7 +199,7 @@ public class Estudiante {
     
 }
 
-//SERVICIO(JFRAME)
+//-----------------------------------------------------------SERVICIO(JFRAME)
 
 public class Servicios extends javax.swing.JFrame {
 

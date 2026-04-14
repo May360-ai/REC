@@ -1,0 +1,591 @@
+//CODIGO COMPLEJO
+
+//CONEXION
+<?php
+
+class Conexion{
+    public function Conectar(){
+        $server = 'localhost';
+        $user = 'root';
+        $password="";
+        $database="soapractica";
+
+        try{
+            $conn=new PDO("mysql:host=$server;dbname=$database;",$user,$password);
+        }catch(Exception $e)
+        {
+            die("Fallo conexión".$e->getMessage());
+        }
+        return $conn;
+    }
+}
+
+?>
+//API
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+
+include_once('cruds.php');
+
+$method = $_SERVER['REQUEST_METHOD'];
+$table = $_GET['table'] ?? 'estudiante'; // Por defecto estudiante si no se especifica
+$search = $_GET['search'] ?? '';
+
+switch($method) {
+    case 'GET':
+        if ($table == 'materia') {
+            Cruds::selectMat($search);
+        } else {
+            Cruds::selectEst($search);
+        }
+        break;
+
+    case 'POST':
+        if ($table == 'materia') {
+            Cruds::insertMat();
+        } else {
+            Cruds::insertEst();
+        }
+        break;
+
+    case 'DELETE':
+        if ($table == 'materia') {
+            Cruds::deleteMat();
+        } else {
+            Cruds::deleteEst();
+        }
+        break;
+
+    case 'PUT':
+        if ($table == 'materia') {
+            Cruds::updateMat();
+        } else {
+            Cruds::updateEst();
+        }
+        break;
+    
+    case 'OPTIONS':
+        // Manejo de pre-flight para CORS
+        http_response_code(200);
+        break;
+
+    default:
+        http_response_code(405);
+        echo json_encode(["error" => "Método no permitido"]);
+        break;
+}
+?>
+
+//CRUDS
+<?php
+include_once("conexion.php");
+
+class Cruds {
+    // ESTUDIANTES
+    public static function selectEst($search = "") {
+        $objConexion = new Conexion();
+        $conectar = $objConexion->Conectar();
+        
+        if ($search) {
+            $sqlSelect = "SELECT * FROM estudiante WHERE cedula LIKE :search OR nombre LIKE :search OR apellido LIKE :search";
+            $resultado = $conectar->prepare($sqlSelect);
+            $searchTerm = "%$search%";
+            $resultado->bindParam(':search', $searchTerm);
+        } else {
+            $sqlSelect = "SELECT * FROM estudiante";
+            $resultado = $conectar->prepare($sqlSelect);
+        }
+        
+        $resultado->execute();
+        $data = $resultado->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+
+    public static function insertEst() {
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();
+        
+        $cedula = $_POST['txtCedula'] ?? '';
+        $nombre = $_POST['txtNombre'] ?? '';
+        $apellido = $_POST['txtApellido'] ?? '';
+        $telefono = $_POST['txtTelefono'] ?? '';
+        $direccion = $_POST['txtDireccion'] ?? '';
+        
+        $sqlInsert = "INSERT INTO estudiante (cedula, nombre, apellido, telefono, direccion) VALUES (:cedula, :nombre, :apellido, :telefono, :direccion)";
+        $resultado = $conn->prepare($sqlInsert);
+        $resultado->execute([
+            ':cedula' => $cedula,
+            ':nombre' => $nombre,
+            ':apellido' => $apellido,
+            ':telefono' => $telefono,
+            ':direccion' => $direccion
+        ]);
+
+        echo json_encode("Se inserto correctamente el estudiante");
+    }
+
+    public static function deleteEst() {
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();   
+        $cedula = $_GET['txtCedula'] ?? '';
+        
+        $sqlDelete = "DELETE FROM estudiante WHERE cedula = :cedula";
+        $resultado = $conn->prepare($sqlDelete);
+        $resultado->execute([':cedula' => $cedula]);
+
+        echo json_encode("Se elimino correctamente el estudiante");
+    }
+
+    public static function updateEst() {
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();
+        
+        $cedula = $_GET['txtCedula'] ?? '';
+        $nombre = $_GET['txtNombre'] ?? '';
+        $apellido = $_GET['txtApellido'] ?? '';
+        $telefono = $_GET['txtTelefono'] ?? '';
+        $direccion = $_GET['txtDireccion'] ?? '';
+        
+        $sqlUpdate = "UPDATE estudiante SET nombre = :nombre, apellido = :apellido, telefono = :telefono, direccion = :direccion WHERE cedula = :cedula";
+        $resultado = $conn->prepare($sqlUpdate);
+        $resultado->execute([
+            ':cedula' => $cedula,
+            ':nombre' => $nombre,
+            ':apellido' => $apellido,
+            ':telefono' => $telefono,
+            ':direccion' => $direccion
+        ]);
+
+        echo json_encode("Se actualizo correctamente el estudiante");
+    }
+
+    // MATERIAS
+    public static function selectMat($search = "") {
+        $objConexion = new Conexion();
+        $conectar = $objConexion->Conectar();
+        
+        if ($search) {
+            $sqlSelect = "SELECT * FROM materia WHERE id LIKE :search OR nombre LIKE :search";
+            $resultado = $conectar->prepare($sqlSelect);
+            $searchTerm = "%$search%";
+            $resultado->bindParam(':search', $searchTerm);
+        } else {
+            $sqlSelect = "SELECT * FROM materia";
+            $resultado = $conectar->prepare($sqlSelect);
+        }
+        
+        $resultado->execute();
+        $data = $resultado->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+
+    public static function insertMat() {
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();
+        
+        $id = $_POST['txtIdMateria'] ?? '';
+        $nombre = $_POST['txtNombreMateria'] ?? '';
+        $estudiante = $_POST['txtCedulaEstudiante'] ?? '';
+        
+        $sqlInsert = "INSERT INTO materia (id, nombre, estudiante) VALUES (:id, :nombre, :estudiante)";
+        $resultado = $conn->prepare($sqlInsert);
+        $resultado->execute([
+            ':id' => $id,
+            ':nombre' => $nombre,
+            ':estudiante' => $estudiante
+        ]);
+
+        echo json_encode("Se inserto correctamente la materia");
+    }
+
+    public static function deleteMat() {
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();   
+        $id = $_GET['txtIdMateria'] ?? '';
+        
+        $sqlDelete = "DELETE FROM materia WHERE id = :id";
+        $resultado = $conn->prepare($sqlDelete);
+        $resultado->execute([':id' => $id]);
+
+        echo json_encode("Se elimino correctamente la materia");
+    }
+
+    public static function updateMat() {
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();
+        
+        $id = $_GET['txtIdMateria'] ?? '';
+        $nombre = $_GET['txtNombreMateria'] ?? '';
+        $estudiante = $_GET['txtCedulaEstudiante'] ?? '';
+        
+        $sqlUpdate = "UPDATE materia SET nombre = :nombre, estudiante = :estudiante WHERE id = :id";
+        $resultado = $conn->prepare($sqlUpdate);
+        $resultado->execute([
+            ':id' => $id,
+            ':nombre' => $nombre,
+            ':estudiante' => $estudiante
+        ]);
+
+        echo json_encode("Se actualizo correctamente la materia");
+    }
+}
+?>
+
+//APISERVICE
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package com.mycompany.practica_soa;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+/**
+ *
+ * @author maya2
+ */
+public class ApiService {
+    static String URL_BASE = "http://localhost/SOA/api.php";
+
+    public static String getEstudiantes() {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL_BASE + "?table=estudiante").openConnection();
+            BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String l;
+            while ((l = r.readLine()) != null) sb.append(l);
+            return sb.toString();
+        } catch (Exception e) { return null; }
+    }
+
+    public static String insertar(Estudiante e) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL_BASE + "?table=estudiante").openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            conn.setDoOutput(true);
+            String p = "txtCedula=" + e.cedula + "&txtNombre=" + e.nombre + "&txtApellido=" + e.apellido + "&txtTelefono=" + e.telefono + "&txtDireccion=" + e.direccion;
+            conn.getOutputStream().write(p.getBytes());
+            return new BufferedReader(new InputStreamReader(conn.getInputStream())).readLine();
+        } catch (Exception ex) { return null; }
+    }
+
+    public static String actualizar(Estudiante e) {
+        try {
+            String u = URL_BASE + "?table=estudiante&txtCedula=" + e.cedula + "&txtNombre=" + e.nombre + "&txtApellido=" + e.apellido + "&txtTelefono=" + e.telefono + "&txtDireccion=" + e.direccion;
+            HttpURLConnection conn = (HttpURLConnection) new URL(u).openConnection();
+            conn.setRequestMethod("PUT");
+            return new BufferedReader(new InputStreamReader(conn.getInputStream())).readLine();
+        } catch (Exception ex) { return null; }
+    }
+
+    public static void eliminar(String ced) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL_BASE + "?table=estudiante&txtCedula=" + ced).openConnection();
+            conn.setRequestMethod("DELETE");
+            conn.getInputStream().read();
+        } catch (Exception e) {}
+    }
+
+    public static String getMaterias() {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL_BASE + "?table=materia").openConnection();
+            BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String l;
+            while ((l = r.readLine()) != null) sb.append(l);
+            return sb.toString();
+        } catch (Exception e) { return null; }
+    }
+
+    public static String inscribirMateria(Materia m) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL_BASE + "?table=materia").openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            conn.setDoOutput(true);
+            // Parámetros según Cruds::insertMat() -> txtIdMateria, txtNombreMateria, txtCedulaEstudiante
+            String p = "txtIdMateria=" + m.id + "&txtNombreMateria=" + m.nombre + "&txtCedulaEstudiante=" + m.estudiante;
+            conn.getOutputStream().write(p.getBytes());
+            return new BufferedReader(new InputStreamReader(conn.getInputStream())).readLine();
+        } catch (Exception ex) { return null; }
+    }
+
+    public static String actualizarMateria(Materia m) {
+        try {
+            // Parámetros según Cruds::updateMat() via $_GET en PUT
+            String u = URL_BASE + "?table=materia&txtIdMateria=" + m.id + "&txtNombreMateria=" + m.nombre + "&txtCedulaEstudiante=" + m.estudiante;
+            HttpURLConnection conn = (HttpURLConnection) new URL(u).openConnection();
+            conn.setRequestMethod("PUT");
+            return new BufferedReader(new InputStreamReader(conn.getInputStream())).readLine();
+        } catch (Exception ex) { return null; }
+    }
+
+    public static void eliminarMateria(String id) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL_BASE + "?table=materia&txtIdMateria=" + id).openConnection();
+            conn.setRequestMethod("DELETE");
+            conn.getInputStream().read();
+        } catch (Exception e) {}
+    }
+}
+
+//ESTUDIANTE
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package com.mycompany.practica_soa;
+
+/**
+ *
+ * @author maya2
+ */
+public class Estudiante {
+    public String cedula;
+    public String nombre;
+    public String apellido;
+    public String telefono;
+    public String direccion;
+    
+    public Estudiante(String cedula, String nombre, String apellido, String telefono, String direccion) {
+        this.cedula = cedula;
+        this.nombre = nombre;
+        this.apellido = apellido;
+        this.telefono = telefono;
+        this.direccion = direccion;
+    }
+
+    @Override
+    public String toString() {
+        return nombre; // Esto es lo que verá el usuario en el ComboBox
+    }
+}
+
+//MATERIA
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package com.mycompany.practica_soa;
+
+/**
+ *
+ * @author maya2
+ */
+public class Materia {
+    public String id;
+    public String nombre;
+    public String estudiante; // Aquí llegará la cédula del estudiante desde el JSON
+
+    public Materia(String id, String nombre, String estudiante) {
+        this.id = id;
+        this.nombre = nombre;
+        this.estudiante = estudiante;
+    }
+}
+
+//SERVICIO(JFRAME)
+
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
+ */
+package com.mycompany.practica_soa;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.util.List;
+import javax.swing.RowFilter;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+/**
+ *
+ * @author maya2
+ */
+public class Servicios extends javax.swing.JFrame {
+
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Servicios.class.getName());
+    private TableRowSorter<DefaultTableModel> sorter;
+
+    /**
+     * Creates new form Servicios
+     */
+    public Servicios() {
+        initComponents();
+        cargarTabla();
+        cargarComboEstudiantes();
+        cargarTablaMaterias();
+    }
+
+    private void btnInscribirActionPerformed(java.awt.event.ActionEvent evt) {                                             
+        inscribir();
+    }                                            
+
+    private void btnEditarMatActionPerformed(java.awt.event.ActionEvent evt) {
+        actualizarMateria();
+    }
+
+    private void btnEliminarMatActionPerformed(java.awt.event.ActionEvent evt) {
+        eliminarMateria();
+    }
+
+    private void actualizarMateria() {
+        if (estudiante.getSelectedItem() == null) return;
+        Estudiante est = (Estudiante) estudiante.getSelectedItem();
+        Materia m = new Materia(idMateria.getText(), nombreMat.getText(), est.cedula);
+        if (ApiService.actualizarMateria(m) != null) {
+            cargarTablaMaterias();
+            limpiarMaterias();
+        }
+    }
+
+    private void eliminarMateria() {
+        ApiService.eliminarMateria(idMateria.getText());
+        cargarTablaMaterias();
+        limpiarMaterias();
+    }
+
+    private void tablaMatMouseClicked(java.awt.event.MouseEvent evt) {
+        int f = tablaMat.getSelectedRow();
+        if (f != -1) {
+            idMateria.setText(tablaMat.getValueAt(f, 0).toString());
+            nombreMat.setText(tablaMat.getValueAt(f, 1).toString());
+            String cedulaTabla = tablaMat.getValueAt(f, 2).toString();
+            
+            // Seleccionar al estudiante en el combo por su cédula
+            for (int i = 0; i < estudiante.getItemCount(); i++) {
+                Estudiante e = (Estudiante) estudiante.getItemAt(i);
+                if (e.cedula.equals(cedulaTabla)) {
+                    estudiante.setSelectedItem(e);
+                    break;
+                }
+            }
+        }
+    }
+
+    public void cargarComboEstudiantes() {
+        String json = ApiService.getEstudiantes();
+        if (json == null) return;
+        List<Estudiante> lista = new Gson().fromJson(json, new TypeToken<List<Estudiante>>() {}.getType());
+        estudiante.removeAllItems();
+        for (Estudiante e : lista) {
+            estudiante.addItem(e); // Guardamos el objeto completo
+        }
+    }
+
+    public void cargarTablaMaterias() {
+        String json = ApiService.getMaterias();
+        if (json == null) return;
+        List<Materia> lista = new Gson().fromJson(json, new TypeToken<List<Materia>>() {}.getType());
+        DefaultTableModel m = new DefaultTableModel(new String[]{"ID", "Materia", "Ced. Estudiante"}, 0);
+        for (Materia ma : lista) {
+            m.addRow(new Object[]{ma.id, ma.nombre, ma.estudiante});
+        }
+        tablaMat.setModel(m);
+    }
+
+    private void inscribir() {
+        if (estudiante.getSelectedItem() == null) return;
+        Estudiante est = (Estudiante) estudiante.getSelectedItem();
+        Materia m = new Materia(idMateria.getText(), nombreMat.getText(), est.cedula);
+        if (ApiService.inscribirMateria(m) != null) {
+            cargarTablaMaterias();
+            limpiarMaterias();
+        }
+    }
+
+    private void limpiarMaterias() {
+        idMateria.setText("");
+        nombreMat.setText("");
+    }
+
+    public void cargarTabla() {
+        String json = ApiService.getEstudiantes();
+        if (json == null) {
+            return;
+        }
+        List<Estudiante> lista = new Gson().fromJson(json, new TypeToken<List<Estudiante>>() {
+        }.getType());
+        DefaultTableModel m = new DefaultTableModel(new String[]{"Cedula", "Nombre", "Apellido", "Telefono", "Direccion"}, 0);
+        for (Estudiante e : lista) {
+            m.addRow(new Object[]{e.cedula, e.nombre, e.apellido, e.telefono, e.direccion});
+        }
+        tabla.setModel(m);
+        sorter = new TableRowSorter<>(m);
+        tabla.setRowSorter(sorter);
+    }
+
+    private void filtrar() {
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + buscar.getText()));
+    }
+
+    private void insertar() {
+        Estudiante e = new Estudiante(cedula.getText(), nombre.getText(), apellido.getText(), telefono.getText(), direccion.getText());
+        if (ApiService.insertar(e) != null) {
+            cargarTabla();
+            cargarComboEstudiantes();
+            limpiar();
+        }
+    }
+
+    private void actualizar() {
+        Estudiante e = new Estudiante(cedula.getText(), nombre.getText(), apellido.getText(), telefono.getText(), direccion.getText());
+        if (ApiService.actualizar(e) != null) {
+            cargarTabla();
+            cargarComboEstudiantes();
+            limpiar();
+        }
+    }
+
+    private void eliminar() {
+        ApiService.eliminar(cedula.getText());
+        cargarTabla();
+        cargarComboEstudiantes();
+        limpiar();
+    }
+
+    private void limpiar() {
+        cedula.setText("");
+        nombre.setText("");
+        apellido.setText("");
+        telefono.setText("");
+        direccion.setText("");
+    }                        
+
+    private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {                                           
+        insertar();
+    }                                          
+
+    private void btnEditarActionPerformed(java.awt.event.ActionEvent evt) {                                          
+        actualizar();
+    }                                         
+
+    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {                                            
+        eliminar();
+    }                                           
+
+    private void btnBuscarActionPerformed(java.awt.event.ActionEvent evt) {                                          
+        filtrar();
+    }                                         
+
+    private void tablaMouseClicked(java.awt.event.MouseEvent evt) {                                   
+        int f = tabla.getSelectedRow();
+        if (f != -1) {
+            cedula.setText(tabla.getValueAt(f, 0).toString());
+            nombre.setText(tabla.getValueAt(f, 1).toString());
+            apellido.setText(tabla.getValueAt(f, 2).toString());
+            telefono.setText(tabla.getValueAt(f, 3).toString());
+            direccion.setText(tabla.getValueAt(f, 4).toString());
+        }
+    }                                  
+
+   
+               
+}

@@ -1,0 +1,296 @@
+//CODIGO SIMPLE
+
+//CONEXION
+
+<?php
+
+class Conexion{
+    public function Conectar(){
+        $server = 'localhost';
+        $user = 'root';
+        $password="";
+        $database="soa";
+
+        try{
+            $conn=new PDO("mysql:host=$server;dbname=$database;",$user,$password);
+         //   echo("Ok se conecto");
+        }catch(Exception $e)
+        {
+            die("Fallo conexión".$e->getMessage());
+        }
+        return $conn;
+    }
+}
+
+?>
+
+//API
+
+<?php
+
+include_once('cruds.php');
+
+$opc = $_SERVER['REQUEST_METHOD'];
+
+switch($opc){
+
+case 'GET':
+    Cruds::selectEst();
+    break;
+
+case 'POST':
+    Cruds::insertEst();
+    break;
+
+case 'DELETE':
+    Cruds::deleteEst();
+    break;
+
+case 'PUT':
+    Cruds::updateEst();
+    break;
+
+}
+
+?>
+
+//CRUDS
+
+<?php
+include_once("conexion.php");
+
+class Cruds{
+
+    public static function selectEst(){
+        $objConexion = new Conexion();
+        $conectar = $objConexion->Conectar();
+        $sqlSelect = "select * from estudiante";
+        $resultado = $conectar->prepare($sqlSelect);;
+        $resultado -> execute();
+        $data = $resultado -> fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($data);
+    }
+
+    public static function insertEst(){
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();
+        $cedula=$_POST['txtCedula'];
+        $nombre=$_POST['txtNombre'];
+        $apellido=$_POST['txtApellido'];
+        $telefono=$_POST['txtTelefono'];
+        $direccion=$_POST['txtDireccion'];
+        $sqlInsert = "INSERT INTO ESTUDIANTE VALUES ('$cedula','$nombre','$apellido','$telefono','$direccion')";
+        $resultado = $conn->prepare($sqlInsert);
+        $resultado ->execute();
+
+        $data="Se inserto correctamente el estudiante";
+
+        echo(json_encode($data));
+
+    }
+
+    public static function deleteEst(){
+        
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();   
+        $cedula=$_GET['txtCedula'];
+        $sqlDelete = "delete from estudiante where cedula = '$cedula'";
+
+        $resultado = $conn->prepare($sqlDelete);
+        $resultado ->execute();
+
+        $data="Se elimino correctamente el estudiante";
+
+        echo(json_encode($data));
+
+    }
+
+    public static function updateEst(){
+        $objConecction = new Conexion();
+        $conn = $objConecction->Conectar();
+        $cedula=$_GET['txtCedula'];
+        $nombre=$_GET['txtNombre'];
+        $apellido=$_GET['txtApellido'];
+        $telefono=$_GET['txtTelefono'];
+        $direccion=$_GET['txtDireccion'];
+        $sqlUpdate = "UPDATE ESTUDIANTE SET nombre = '$nombre',
+                                            apellido = '$apellido',
+                                            telefono = '$telefono',
+                                            direccion = '$direccion'
+                        WHERE cedula='$cedula'";
+        $resultado = $conn->prepare($sqlUpdate);
+        $resultado ->execute();
+
+        $data="Se actualizo correctamente el estudiante";
+
+        echo(json_encode($data));
+
+    }
+
+}
+
+?>
+
+//APISERVICION JAVA
+
+import java.io.*;
+import java.net.*;
+
+public class ApiService {
+    static String URL = "http://localhost/SOA/api.php";
+
+    public static String getEstudiantes() {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL).openConnection();
+            BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String l;
+            while ((l = r.readLine()) != null) sb.append(l);
+            return sb.toString();
+        } catch (Exception e) { return null; }
+    }
+
+    public static String insertar(Estudiante e) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL).openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            String p = "txtCedula=" + e.cedula + "&txtNombre=" + e.nombre + "&txtApellido=" + e.apellido + "&txtTelefono=" + e.telefono + "&txtDireccion=" + e.direccion;
+            conn.getOutputStream().write(p.getBytes());
+            return new BufferedReader(new InputStreamReader(conn.getInputStream())).readLine();
+        } catch (Exception ex) { return null; }
+    }
+
+    public static String actualizar(Estudiante e) {
+        try {
+            String u = URL + "?txtCedula=" + e.cedula + "&txtNombre=" + e.nombre + "&txtApellido=" + e.apellido + "&txtTelefono=" + e.telefono + "&txtDireccion=" + e.direccion;
+            HttpURLConnection conn = (HttpURLConnection) new URL(u).openConnection();
+            conn.setRequestMethod("PUT");
+            return new BufferedReader(new InputStreamReader(conn.getInputStream())).readLine();
+        } catch (Exception ex) { return null; }
+    }
+
+    public static void eliminar(String ced) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(URL + "?txtCedula=" + ced).openConnection();
+            conn.setRequestMethod("DELETE");
+            conn.getInputStream().read();
+        } catch (Exception e) {}
+    }
+}
+
+//ESTUDIANTE
+
+ */
+public class Estudiante {
+    String cedula;
+    String nombre;
+    String apellido;
+    String telefono;
+    String direccion;
+
+    public Estudiante(String cedula, String nombre, String apellido, String telefono, String direccion) {
+        this.cedula = cedula;
+        this.nombre = nombre;
+        this.apellido = apellido;
+        this.telefono = telefono;
+        this.direccion = direccion;
+    }
+    
+}
+
+//SERVICIO(JFRAME)
+
+public class Servicios extends javax.swing.JFrame {
+
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Servicios.class.getName());
+    private TableRowSorter<DefaultTableModel> sorter;
+
+    /**
+     * Creates new form Servicios
+     */
+    public Servicios() {
+        initComponents();
+        cargarTabla();
+    }
+
+    public void cargarTabla() {
+        String json = ApiService.getEstudiantes();
+        if (json == null) {
+            return;
+        }
+        List<Estudiante> lista = new Gson().fromJson(json, new TypeToken<List<Estudiante>>() {
+        }.getType());
+        DefaultTableModel m = new DefaultTableModel(new String[]{"Cedula", "Nombre", "Apellido", "Telefono", "Direccion"}, 0);
+        for (Estudiante e : lista) {
+            m.addRow(new Object[]{e.cedula, e.nombre, e.apellido, e.telefono, e.direccion});
+        }
+        tabla.setModel(m);
+        sorter = new TableRowSorter<>(m);
+        tabla.setRowSorter(sorter);
+    }
+
+    private void filtrar() {
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + buscar.getText()));
+    }
+
+    private void insertar() {
+        Estudiante e = new Estudiante(cedula.getText(), nombre.getText(), apellido.getText(), telefono.getText(), direccion.getText());
+        if (ApiService.insertar(e) != null) {
+            cargarTabla();
+            limpiar();
+        }
+    }
+
+    private void actualizar() {
+        Estudiante e = new Estudiante(cedula.getText(), nombre.getText(), apellido.getText(), telefono.getText(), direccion.getText());
+        if (ApiService.actualizar(e) != null) {
+            cargarTabla();
+            limpiar();
+        }
+    }
+
+    private void eliminar() {
+        ApiService.eliminar(cedula.getText());
+        cargarTabla();
+        limpiar();
+    }
+
+    private void limpiar() {
+        cedula.setText("");
+        nombre.setText("");
+        apellido.setText("");
+        telefono.setText("");
+        direccion.setText("");
+    }
+
+               
+
+    private void btnGuardarActionPerformed(java.awt.event.ActionEvent evt) {                                           
+        insertar();
+    }                                          
+
+    private void btnEditarActionPerformed(java.awt.event.ActionEvent evt) {                                          
+        actualizar();
+    }                                         
+
+    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {                                            
+        eliminar();
+    }                                           
+
+    private void btnBuscarActionPerformed(java.awt.event.ActionEvent evt) {                                          
+        filtrar();
+    }                                         
+
+    private void tablaMouseClicked(java.awt.event.MouseEvent evt) {                                   
+        int f = tabla.getSelectedRow();
+        if (f != -1) {
+            cedula.setText(tabla.getValueAt(f, 0).toString());
+            nombre.setText(tabla.getValueAt(f, 1).toString());
+            apellido.setText(tabla.getValueAt(f, 2).toString());
+            telefono.setText(tabla.getValueAt(f, 3).toString());
+            direccion.setText(tabla.getValueAt(f, 4).toString());
+        }
+    }                                  
+
+
